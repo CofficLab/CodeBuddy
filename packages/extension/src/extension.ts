@@ -42,18 +42,25 @@ export function activate(context: vscode.ExtensionContext) {
                 async (message) => {
                     switch (message.command) {
                         case 'fetchAIResponse':
+                            // 获取用户请求的提供商或使用默认提供商
+                            const requestProvider = message.provider || aiProvider;
+
+                            // 检查指定提供商是否有API密钥
+                            const providerApiKey = config.get(`${requestProvider}.apiKey`);
+                            const hasProviderApiKey = Boolean(providerApiKey);
+
                             // 检查是否有API密钥
-                            if (!hasApiKey) {
+                            if (!hasProviderApiKey) {
                                 panel.webview.postMessage({
                                     command: 'configurationRequired',
-                                    provider: aiProvider
+                                    provider: requestProvider
                                 });
                                 return;
                             }
 
                             try {
                                 // 调用AI API
-                                const response = await callAIAPI(message.prompt, aiProvider);
+                                const response = await callAIAPI(message.prompt, requestProvider);
                                 panel.webview.postMessage({
                                     command: 'aiResponse',
                                     response
@@ -64,6 +71,17 @@ export function activate(context: vscode.ExtensionContext) {
                                     message: error instanceof Error ? error.message : String(error)
                                 });
                             }
+                            break;
+
+                        case 'checkProvider':
+                            // 检查指定提供商是否配置了API密钥
+                            const checkProvider = message.provider;
+                            const checkApiKey = config.get(`${checkProvider}.apiKey`);
+                            panel.webview.postMessage({
+                                command: 'providerStatus',
+                                provider: checkProvider,
+                                hasApiKey: Boolean(checkApiKey)
+                            });
                             break;
 
                         case 'openSettings':

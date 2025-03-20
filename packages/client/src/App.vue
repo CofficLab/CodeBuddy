@@ -1,33 +1,117 @@
 <template>
-  <div class="app-container">
+  <div class="min-h-screen bg-base-200 flex flex-col">
     <!-- 未配置API密钥时显示提示 -->
-    <div v-if="!hasApiKey" class="config-message">
-      <h2>配置需要完成</h2>
-      <p>请配置您的 {{ currentProvider }} API 密钥以开始使用AI聊天功能。</p>
-      <button @click="openSettings">打开设置</button>
+    <div v-if="!hasApiKey" class="hero min-h-screen">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <h1 class="text-3xl font-bold">配置需要完成</h1>
+          <p class="py-6">请配置您的 <span class="font-bold capitalize">{{ currentProvider }}</span> API 密钥以开始使用AI聊天功能。</p>
+
+          <div class="form-control w-full max-w-xs mx-auto mb-4">
+            <label class="label">
+              <span class="label-text">选择AI供应商</span>
+            </label>
+            <select v-model="currentProvider" class="select select-bordered w-full">
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="deepseek">DeepSeek</option>
+            </select>
+          </div>
+
+          <button @click="openSettings" class="btn btn-primary">配置 API 密钥</button>
+        </div>
+      </div>
     </div>
 
     <!-- 已配置API密钥显示聊天界面 -->
-    <div v-else class="chat-container">
-      <div class="provider-select">
-        <label>AI供应商: </label>
-        <span>{{ currentProvider }}</span>
+    <div v-else class="flex flex-col h-screen">
+      <!-- 头部 -->
+      <div class="navbar bg-base-300">
+        <div class="flex-1">
+          <a class="btn btn-ghost normal-case text-xl">AI Chat Assistant</a>
+        </div>
+        <div class="flex-none">
+          <div class="dropdown dropdown-end">
+            <label tabindex="0" class="btn btn-ghost">
+              <span class="capitalize">{{ getProviderName(currentProvider) }}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-1" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </label>
+            <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+              <li><a @click="changeProvider('openai')" :class="{ 'font-bold': currentProvider === 'openai' }">OpenAI</a>
+              </li>
+              <li><a @click="changeProvider('anthropic')"
+                  :class="{ 'font-bold': currentProvider === 'anthropic' }">Anthropic (Claude)</a></li>
+              <li><a @click="changeProvider('deepseek')"
+                  :class="{ 'font-bold': currentProvider === 'deepseek' }">DeepSeek</a></li>
+              <li>
+                <hr class="my-1" />
+              </li>
+              <li><a @click="openSettings" class="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  设置
+                </a></li>
+            </ul>
+          </div>
+        </div>
       </div>
 
-      <div class="messages" ref="messagesContainer">
-        <div v-for="(message, index) in messages" :key="index"
-          :class="['message', message.role === 'user' ? 'user-message' : 'ai-message']">
-          <div class="message-content">{{ message.content }}</div>
-        </div>
-        <div v-if="isLoading" class="message ai-message">
-          <div class="message-content">思考中...</div>
+      <!-- 消息区域 -->
+      <div class="flex-1 overflow-auto p-4 bg-base-200" ref="messagesContainer">
+        <div class="flex flex-col gap-3">
+          <div v-for="(message, index) in messages" :key="index"
+            :class="['chat', message.role === 'user' ? 'chat-end' : 'chat-start']">
+            <div class="chat-image avatar">
+              <div class="w-10 rounded-full">
+                <img v-if="message.role === 'user'" src="https://api.dicebear.com/6.x/bottts/svg?seed=user"
+                  alt="User" />
+                <img v-else :src="`https://api.dicebear.com/6.x/bottts/svg?seed=${currentProvider}`"
+                  :alt="currentProvider" />
+              </div>
+            </div>
+            <div :class="['chat-bubble', message.role === 'user' ? 'chat-bubble-primary' : 'chat-bubble-secondary']">
+              {{ message.content }}
+            </div>
+            <div class="chat-footer opacity-50">
+              {{ message.role === 'user' ? '您' : getProviderName(currentProvider) }}
+            </div>
+          </div>
+
+          <div v-if="isLoading" class="chat chat-start">
+            <div class="chat-image avatar">
+              <div class="w-10 rounded-full">
+                <img :src="`https://api.dicebear.com/6.x/bottts/svg?seed=${currentProvider}`" :alt="currentProvider" />
+              </div>
+            </div>
+            <div class="chat-bubble chat-bubble-secondary">
+              <span class="loading loading-dots loading-md"></span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="input-container">
-        <textarea v-model="inputMessage" placeholder="输入消息..." @keydown.enter.prevent="sendMessage"
-          :disabled="isLoading"></textarea>
-        <button @click="sendMessage" :disabled="isLoading || !inputMessage.trim()">发送</button>
+      <!-- 输入区域 -->
+      <div class="p-4 bg-base-300">
+        <div class="join w-full">
+          <textarea v-model="inputMessage" class="textarea textarea-bordered join-item w-full focus:outline-none"
+            placeholder="输入消息..." @keydown.enter.prevent="sendMessage" :disabled="isLoading"></textarea>
+          <button class="btn btn-primary join-item" @click="sendMessage" :disabled="isLoading || !inputMessage.trim()">
+            <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            <span v-else class="loading loading-spinner"></span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -67,6 +151,26 @@ export default {
     window.removeEventListener('message', this.handleExtensionMessage);
   },
   methods: {
+    getProviderName(provider: string): string {
+      const nameMap: Record<string, string> = {
+        'openai': 'OpenAI',
+        'anthropic': 'Claude',
+        'deepseek': 'DeepSeek'
+      };
+      return nameMap[provider] || provider;
+    },
+
+    changeProvider(provider: string) {
+      this.currentProvider = provider;
+      // 检查新提供商是否已配置
+      vscode.postMessage({
+        command: 'checkProvider',
+        provider
+      });
+      // 清空聊天记录
+      this.messages = [];
+    },
+
     handleExtensionMessage(event: MessageEvent) {
       const message = event.data;
 
@@ -79,6 +183,17 @@ export default {
         case 'configurationRequired':
           this.hasApiKey = false;
           this.currentProvider = message.provider;
+          break;
+
+        case 'providerStatus':
+          this.hasApiKey = message.hasApiKey;
+          if (!message.hasApiKey) {
+            // 如果新提供商未配置，提示用户
+            this.messages.push({
+              role: 'assistant',
+              content: `请先配置 ${this.getProviderName(this.currentProvider)} API 密钥`
+            });
+          }
           break;
 
         case 'aiResponse':
@@ -113,7 +228,8 @@ export default {
       // 发送消息到扩展
       vscode.postMessage({
         command: 'fetchAIResponse',
-        prompt: this.inputMessage
+        prompt: this.inputMessage,
+        provider: this.currentProvider
       });
 
       // 清空输入并显示加载状态
@@ -143,117 +259,10 @@ export default {
 </script>
 
 <style>
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  background-color: #f5f5f5;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-}
-
-.config-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 2rem;
-  text-align: center;
-}
-
-.config-message h2 {
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.config-message button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background-color: #007acc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.provider-select {
-  padding: 0.5rem 1rem;
-  background-color: #eaeaea;
-  border-bottom: 1px solid #ccc;
-  display: flex;
-  align-items: center;
-}
-
-.provider-select span {
-  font-weight: bold;
-  margin-left: 0.5rem;
-  text-transform: capitalize;
-}
-
-.messages {
-  flex: 1;
-  padding: 1rem;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.message {
-  max-width: 80%;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-}
-
-.user-message {
-  align-self: flex-end;
-  background-color: #007acc;
-  color: white;
-}
-
-.ai-message {
-  align-self: flex-start;
-  background-color: #e5e5e5;
-  color: #333;
-}
-
-.input-container {
-  display: flex;
-  padding: 1rem;
-  background-color: #eaeaea;
-  border-top: 1px solid #ccc;
-}
-
-.input-container textarea {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+/* 全局样式保留，因为DaisyUI和Tailwind会处理大部分样式 */
+.textarea {
+  height: 60px;
   resize: none;
-  height: 40px;
   font-family: inherit;
-}
-
-.input-container button {
-  margin-left: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #007acc;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.input-container button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
 }
 </style>
