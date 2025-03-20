@@ -19,7 +19,37 @@
                 "command": "vue-3-vscode-webview.createFlow",
                 "title": "Hello World"
             }
-        ]
+        ],
+        "configuration": {
+            "title": "Hello World",
+            "properties": {
+                "buddycoder.aiProvider": {
+                    "type": "string",
+                    "default": "openai",
+                    "enum": [
+                        "openai",
+                        "anthropic",
+                        "deepseek"
+                    ],
+                    "description": "Select the AI provider to use"
+                },
+                "buddycoder.openai.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key for OpenAI"
+                },
+                "buddycoder.anthropic.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key for Anthropic"
+                },
+                "buddycoder.deepseek.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key for Deepseek"
+                }
+            }
+        }
     },
     "scripts": {
         "vscode:prepublish": "yarn run package",
