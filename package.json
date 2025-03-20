@@ -1,5 +1,5 @@
 {
-    "name": "buddy",
+    "name": "buddy_workspace",
     "version": "1.0.0",
     "main": "index.js",
     "license": "MIT",
@@ -13,6 +13,9 @@
         "packages/*"
     ],
     "scripts": {
-        "watch": "nodemon pipeline.js"
+        "watch": "nodemon pipeline.js",
+        "build": "lerna run build",
+        "build:mcp": "lerna run build:mcp",
+        "run:mcp": "yarn workspace smart-buddy run run:mcp"
     }
 }

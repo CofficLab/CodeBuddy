@@ -6,3 +6,4 @@
 /packages/client/dist
 /packages/extension/dist
 *.vsix
+.env

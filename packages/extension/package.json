@@ -4,7 +4,7 @@
     "description": "",
     "repository": {
         "type": "git",
-        "url": "https://github.com/cofficlab/buddy"
+        "url": "https://github.com/cofficlab/CodeBuddy"
     },
     "version": "0.0.6",
     "engines": {
@@ -15,9 +15,6 @@
         "Other"
     ],
     "main": "./dist/extension.js",
-    "activationEvents": [
-        "onCommand:buddycoder.open"
-    ],
     "contributes": {
         "commands": [
             {
@@ -57,9 +54,10 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "yarn run build",
         "dev": "vite build --watch",
         "build": "vite build",
+        "build:mcp": "vite build --config vite.mcp.config.ts",
+        "run:mcp": "yarn build:mcp && node --enable-source-maps dist/mcp/mcp.js",
         "preview": "vite preview",
         "compile-tests": "tsc -p . --outDir out",
         "watch-tests": "tsc -p . -w --outDir out",
@@ -72,6 +70,7 @@
     "dependencies": {
         "@anthropic-ai/sdk": "^0.39.0",
         "@modelcontextprotocol/sdk": "^1.7.0",
+        "chalk": "4",
         "dotenv": "^16.4.7",
         "node-fetch": "^2.6.7"
     },
@@ -90,6 +89,6 @@
         "glob": "^7.1.7",
         "mocha": "^9.1.3",
         "typescript": "^5.8.2",
-        "vite": "^5.1.0"
+        "vite": "5.4.14"
     }
 }

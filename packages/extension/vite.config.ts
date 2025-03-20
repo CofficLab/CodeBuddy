@@ -1,3 +1,4 @@
+// @ts-ignore
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { builtinModules } from 'module';
@@ -16,7 +17,6 @@ export default defineConfig({
                 ...builtinModules.map(m => `node:${m}`),
             ],
             output: {
-                // Provide global variables to use in the UMD build
                 globals: {
                     vscode: 'vscode',
                 },

@@ -52,6 +52,11 @@ Inside the vue application code, the `vscode` object is globally accessible and 
 
 [Developing a VS Code Extension using Vue 3 and WebView Panels API](https://medium.com/@mhdi_kr/developing-a-vs-code-extension-using-vue-3-and-webview-panels-api-536d87ce653a)
 
+## 🔗 Links
+
+- [GitHub](https://github.com/cofficlab/CodeBuddy)
+- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=coffic.smart-buddy)
+
 ## 🤝 Contribution
 
 If you have any questions or recommendations please create a new issue for it, and if you've hacked together any feature or enhancement, a pull request is more than welcome here! 🙏
