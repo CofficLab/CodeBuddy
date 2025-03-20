@@ -8,6 +8,8 @@ import readline from "readline/promises";
 export const projectDir = path.join(os.homedir(), 'Code', 'Coffic', 'build_mcp_for_cursor', 'project');
 export const defaultPath = 'main.py';
 export const defaultCommand = `uv --directory ${projectDir} run`;
+export const memoryCommand = "npx -y @modelcontextprotocol/server-memory";
+export const filesystemCommand = (path: string) => `npx -y @modelcontextprotocol/server-filesystem ${path}`;
 
 export class ConfigManager {
     private rl: readline.Interface;
@@ -32,17 +34,23 @@ export class ConfigManager {
             chalk.yellow(defaultPath),
             chalk.blue('\n默认启动命令：'),
             chalk.yellow(`${defaultCommand} main.py`),
+            chalk.blue('\n内存模式启动命令：'),
+            chalk.yellow(memoryCommand),
+            chalk.blue('\n文件系统模式启动命令：'),
+            chalk.yellow(filesystemCommand(process.cwd())),
         ].join('\n');
 
         const options = [
             chalk.yellow('\n\n选项：'),
             chalk.white('1) 使用默认配置 [回车]'),
-            chalk.white('2) 自定义配置\n'),
+            chalk.white('2) 自定义配置'),
+            chalk.white('3) 例子：@modelcontextprotocol/server-memory'),
+            chalk.white('4) 例子：@modelcontextprotocol/server-filesystem（当前目录）\n'),
         ].join('\n');
 
         console.log([title, defaultPathInfo, options].join(''));
 
-        const answer = await this.rl.question(chalk.green('请选择 (1-2): '));
+        const answer = await this.rl.question(chalk.green('请选择 (1-4): '));
         const choice = answer.trim() || '1';
 
         switch (choice) {
@@ -60,6 +68,13 @@ export class ConfigManager {
                 }
 
                 return { scriptPath, command: customCommand };
+            case '3':
+                console.log(chalk.blue('\n✅ 已选择内存模式...\n'));
+                return { scriptPath: '', command: memoryCommand };
+            case '4':
+                const currentPath = process.cwd();
+                console.log(chalk.blue('\n✅ 已选择文件系统模式，使用当前目录：') + chalk.yellow(currentPath) + '\n');
+                return { scriptPath: '', command: filesystemCommand(currentPath) };
             default:
                 console.log(chalk.yellow('\n❌ 无效的选择！使用默认配置继续...\n'));
                 return { scriptPath: defaultPath, command: defaultCommand };

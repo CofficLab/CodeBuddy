@@ -48,19 +48,19 @@ export class MCPClient extends EventEmitter {
         let prefix = "";
         switch (level) {
             case "debug":
-                prefix = chalk.gray("🔍 调试");
+                prefix = chalk.gray("🔍");
                 console.log(chalk.gray(`${prefix} [MCP服务器] ${message}`));
                 break;
             case "info":
-                prefix = chalk.blue("ℹ️ 信息");
+                prefix = chalk.blue("ℹ️");
                 console.log(chalk.blue(`${prefix} [MCP服务器] ${message}`));
                 break;
             case "warning":
-                prefix = chalk.yellow("⚠️ 警告");
+                prefix = chalk.yellow("⚠️");
                 console.log(chalk.yellow(`${prefix} [MCP服务器] ${message}`));
                 break;
             case "error":
-                prefix = chalk.red("❌ 错误");
+                prefix = chalk.red("❌");
                 console.log(chalk.red(`${prefix} [MCP服务器] ${message}`));
                 break;
         }
