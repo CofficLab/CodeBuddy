@@ -1,9 +1,9 @@
 import readline from "readline/promises";
 import dotenv from "dotenv";
 import chalk from "chalk";
-import { CLI } from "./mcp/cli";
-import { ConfigManager } from "./mcp/config";
-import { formatError } from "./mcp/utils";
+import { CLI } from "./mcp/cli.js";
+import { ConfigManager } from "./mcp/config.js";
+import { formatError } from "./mcp/utils.js";
 
 // 强制启用颜色输出
 process.env.FORCE_COLOR = '1';
@@ -36,13 +36,21 @@ async function main() {
     } catch (error) {
         const errorMsg = formatError(error);
         console.error(chalk.red('\n❌ MCP 服务启动失败：\n') + errorMsg);
-        process.exit(1);
+        process.exitCode = 1;
     } finally {
         rl.close();
+        // 确保程序在所有事件处理完成后退出
+        console.log(chalk.gray('\n🖐 程序退出中...'));
+
+        // 给予一点时间确保所有日志都输出完毕
+        setTimeout(() => {
+            process.exit(process.exitCode || 0);
+        }, 500);
     }
 }
 
-main().catch((error) => {
-    console.error(chalk.red('\n❌ 程序执行出错：'), error);
+// Run the main function
+main().catch(error => {
+    console.error(chalk.red('\n❌ 未处理的错误：\n'), error);
     process.exit(1);
 });

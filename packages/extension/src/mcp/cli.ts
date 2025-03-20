@@ -1,6 +1,6 @@
 import readline from "readline/promises";
 import chalk from "chalk";
-import { MCPClient, Tool } from "./client";
+import { MCPClient, Tool, LogMessage } from "./client";
 
 export class CLI {
     private client: MCPClient;
@@ -9,6 +9,12 @@ export class CLI {
     constructor(rl: readline.Interface) {
         this.client = new MCPClient();
         this.rl = rl;
+
+        // Set up log message handler
+        this.client.on("log", (logMessage: LogMessage) => {
+            // This is optional as the client already logs to console
+            // We could add more advanced log handling here if needed
+        });
     }
 
     async promptForToolArguments(tool: Tool) {
@@ -48,10 +54,17 @@ export class CLI {
 
     async start(command: string) {
         try {
+            console.log(chalk.cyan('\n🔌 正在连接服务器，请稍候...'));
             await this.client.connectToServer(command);
+            console.log(chalk.green('\n✅ 服务器连接成功！'));
+
             await this.chatLoop();
+        } catch (error) {
+            console.error(chalk.red("\n❌ 连接或执行过程中出错:"), error);
         } finally {
+            console.log(chalk.blue('\n👋 正在关闭客户端...'));
             await this.client.cleanup();
+            console.log(chalk.green('👍 客户端已关闭，感谢使用！'));
         }
     }
 

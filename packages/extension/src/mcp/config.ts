@@ -5,8 +5,8 @@ import chalk from "chalk";
 import readline from "readline/promises";
 
 // 默认配置
-export const projectDir = path.join(os.homedir(), 'Code', 'Playground', 'build_mcp_for_cursor', 'project');
-export const defaultPath = path.join(projectDir, 'main.py');
+export const projectDir = path.join(os.homedir(), 'Code', 'Coffic', 'build_mcp_for_cursor', 'project');
+export const defaultPath = 'main.py';
 export const defaultCommand = `uv --directory ${projectDir} run`;
 
 export class ConfigManager {

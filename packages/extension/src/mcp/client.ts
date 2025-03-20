@@ -2,6 +2,8 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import chalk from "chalk";
 import { formatError, delay } from "./utils.js";
+import { EventEmitter } from "events";
+import { ChildProcess } from "child_process";
 
 export interface Tool {
     name: string;
@@ -13,13 +15,91 @@ export interface Tool {
     };
 }
 
-export class MCPClient {
+export type LogLevel = "debug" | "info" | "warning" | "error";
+
+export interface LogMessage {
+    level: LogLevel;
+    data: string;
+    timestamp?: string;
+}
+
+export class MCPClient extends EventEmitter {
     private mcp: Client;
     private transport: StdioClientTransport | null = null;
+    private serverProcess: ChildProcess | null = null;
     private tools: Tool[] = [];
+    private logBuffer: string[] = [];
 
     constructor() {
+        super();
         this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
+    }
+
+    private handleLogMessage(level: LogLevel, message: string) {
+        const logMessage: LogMessage = {
+            level,
+            data: message,
+            timestamp: new Date().toISOString()
+        };
+
+        this.emit("log", logMessage);
+
+        // Also log to console with colors based on level
+        let prefix = "";
+        switch (level) {
+            case "debug":
+                prefix = chalk.gray("🔍 调试");
+                console.log(chalk.gray(`${prefix} [MCP服务器] ${message}`));
+                break;
+            case "info":
+                prefix = chalk.blue("ℹ️ 信息");
+                console.log(chalk.blue(`${prefix} [MCP服务器] ${message}`));
+                break;
+            case "warning":
+                prefix = chalk.yellow("⚠️ 警告");
+                console.log(chalk.yellow(`${prefix} [MCP服务器] ${message}`));
+                break;
+            case "error":
+                prefix = chalk.red("❌ 错误");
+                console.log(chalk.red(`${prefix} [MCP服务器] ${message}`));
+                break;
+        }
+    }
+
+    private processServerOutput(data: string) {
+        // Check if the data looks like a JSON-RPC message
+        try {
+            const json = JSON.parse(data);
+
+            // Check if this appears to be a log notification
+            if (json && json.method === "log" && json.params) {
+                const level = json.params.level || "info";
+                const message = json.params.data || "No message data";
+                this.handleLogMessage(level as LogLevel, message);
+                return;
+            }
+        } catch (e) {
+            // Not JSON or not a log notification, process as normal output
+        }
+
+        // If we're here, it's either not JSON or not a log notification
+        // Check if it looks like a structured log message
+        if (data.includes(" - ")) {
+            if (data.includes("INFO")) {
+                this.handleLogMessage("info", data);
+            } else if (data.includes("WARNING")) {
+                this.handleLogMessage("warning", data);
+            } else if (data.includes("ERROR")) {
+                this.handleLogMessage("error", data);
+            } else if (data.includes("DEBUG")) {
+                this.handleLogMessage("debug", data);
+            } else {
+                this.handleLogMessage("info", data);
+            }
+        } else {
+            // Just regular output
+            this.handleLogMessage("info", data);
+        }
     }
 
     async connectToServer(command: string, retries = 3) {
@@ -45,9 +125,45 @@ export class MCPClient {
                     this.transport = null;
                 }
 
+                // Terminate any existing server process
+                if (this.serverProcess) {
+                    try {
+                        this.serverProcess.kill();
+                    } catch (error) {
+                        console.log(chalk.yellow("\n⚠️ 终止旧服务器进程时出错:"), error);
+                    }
+                    this.serverProcess = null;
+                }
+
+                // Set up a custom child process to capture stderr
+                const { spawn } = await import('child_process');
+                this.serverProcess = spawn(cmd, args, {
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    detached: false
+                });
+
+                // Handle server stderr output
+                this.serverProcess.stderr?.on('data', (data) => {
+                    const message = data.toString().trim();
+                    if (message) {
+                        message.split('\n').forEach((line: string) => {
+                            if (line.trim()) {
+                                this.processServerOutput(line);
+                            }
+                        });
+                    }
+                });
+
+                // Listen for process exit
+                this.serverProcess.on('exit', (code) => {
+                    console.log(chalk.gray(`\n📋 MCP服务器进程已退出，退出码: ${code}`));
+                    this.serverProcess = null;
+                });
+
+                // Create transport using pipes to our spawned process
                 this.transport = new StdioClientTransport({
                     command: cmd,
-                    args: args,
+                    args: args
                 });
 
                 console.log(chalk.gray('\n⏳ 等待服务器初始化...'));
@@ -122,9 +238,40 @@ export class MCPClient {
     }
 
     async cleanup() {
+        console.log(chalk.gray('\n🧹 正在清理资源...'));
+
+        // First close MCP connection
         if (this.transport) {
-            await this.mcp.close();
-            this.transport = null;
+            try {
+                console.log(chalk.gray('🔌 关闭MCP连接...'));
+                await this.mcp.close();
+                this.transport = null;
+            } catch (error) {
+                console.log(chalk.yellow("\n⚠️ 关闭MCP连接时出错:"), error);
+            }
         }
+
+        // Then terminate the server process
+        if (this.serverProcess) {
+            try {
+                console.log(chalk.gray('🛑 终止MCP服务器进程...'));
+                this.serverProcess.kill('SIGTERM');
+
+                // Give it a moment to terminate gracefully
+                await delay(500);
+
+                // Force kill if still running
+                if (this.serverProcess && !this.serverProcess.killed) {
+                    console.log(chalk.yellow('⚠️ 服务器进程未响应SIGTERM，强制结束...'));
+                    this.serverProcess.kill('SIGKILL');
+                }
+            } catch (error) {
+                console.log(chalk.yellow("\n⚠️ 终止服务器进程时出错:"), error);
+            } finally {
+                this.serverProcess = null;
+            }
+        }
+
+        console.log(chalk.green('✅ 所有资源已清理完毕'));
     }
 } 
