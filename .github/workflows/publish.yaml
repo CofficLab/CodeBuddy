@@ -13,15 +13,21 @@ jobs:
               uses: actions/setup-node@v4
               with:
                   node-version: 20.x
-            - run: |
-                  npm install -g yarn
+            - name: Install Yarn
+              run: npm install -g yarn
+            - name: Build Client
+              run: |
                   cd packages/client 
                   yarn 
                   npm run build
+            - name: Build Extension
+              run: |
                   cd packages/extension
                   yarn
                   yarn compile
             - name: Publish
-              run: yarn deploy
+              run: |
+                  cd packages/extension
+                  yarn deploy
               env:
                   VSCE_PAT: ${{ secrets.VSCE_PAT }}
