@@ -34,6 +34,8 @@ To add more commands to your extension, edit the `package.json` located in the `
 
 ## 🔧 How it works
 
+![flow](./static/flow.jpg)
+
 The project is built with monorepo structure containing two packages. The first one being the client, and the second being the visual studio code extension program.
 
 when you start developing on the `/packages/client/` vue application directory, your changes will be watched using nodemon, then rebuilt and be opened inside vscode extension host ready to be used with vscode command pallet!
@@ -41,6 +43,8 @@ when you start developing on the `/packages/client/` vue application directory, 
 Here you can see your vue project already built and injected using vscode webview API. you can utilize the full functionality of vue such as its amazing reactivity and its available additions (like `vue-router`) out of the box!
 
 Inside the vue application code, the `vscode` object is globally accessible and can be used to send messages to the vscode runtime and perform tasks such as read/writing files, etc.
+
+![helloworld](./static/helloworld.gif)
 
 ## 🤖 Supported AI Providers
 

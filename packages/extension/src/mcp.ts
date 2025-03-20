@@ -1,6 +1,7 @@
 import readline from "readline/promises";
+import dotenv from "dotenv";
 import chalk from "chalk";
-import { MCPClient } from "./mcp/client";
+import { CLI } from "./mcp/cli";
 import { ConfigManager } from "./mcp/config";
 import { formatError } from "./mcp/utils";
 
@@ -8,13 +9,15 @@ import { formatError } from "./mcp/utils";
 process.env.FORCE_COLOR = '1';
 chalk.level = 3;
 
+dotenv.config();
+
 async function main() {
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
     });
 
-    const mcpClient = new MCPClient(rl);
+    const cli = new CLI(rl);
     const configManager = new ConfigManager(rl);
 
     try {
@@ -29,15 +32,13 @@ async function main() {
         console.log(chalk.blue(`📂 脚本路径：`) + chalk.yellow(config.scriptPath));
         console.log(chalk.blue(`🐶 启动命令：`) + chalk.yellow(config.command) + '\n');
 
-        await mcpClient.connectToServer(`${config.command} ${config.scriptPath}`);
-        await mcpClient.chatLoop();
+        await cli.start(`${config.command} ${config.scriptPath}`);
     } catch (error) {
         const errorMsg = formatError(error);
         console.error(chalk.red('\n❌ MCP 服务启动失败：\n') + errorMsg);
         process.exit(1);
     } finally {
         rl.close();
-        await mcpClient.cleanup();
     }
 }
 

@@ -1,18 +1,25 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import readline from "readline/promises";
 import chalk from "chalk";
 import { formatError, delay } from "./utils.js";
+
+export interface Tool {
+    name: string;
+    description?: string;
+    inputSchema: {
+        type: "object";
+        properties?: Record<string, { type: string }>;
+        required?: string[];
+    };
+}
 
 export class MCPClient {
     private mcp: Client;
     private transport: StdioClientTransport | null = null;
-    private tools: any[] = [];
-    private rl: readline.Interface;
+    private tools: Tool[] = [];
 
-    constructor(rl: readline.Interface) {
+    constructor() {
         this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
-        this.rl = rl;
     }
 
     async connectToServer(command: string, retries = 3) {
@@ -54,7 +61,7 @@ export class MCPClient {
 
                 console.log(chalk.gray('📋 获取可用工具列表...'));
                 const toolsResult = await this.mcp.listTools();
-                this.tools = toolsResult.tools;
+                this.tools = toolsResult.tools as Tool[];
 
                 console.log(chalk.green("\n✅ 已连接到服务器，可用工具如下:"));
                 this.tools.forEach((tool, index) => {
@@ -86,11 +93,11 @@ export class MCPClient {
         }
     }
 
-    async executeTool(toolIndex: number, args: any) {
+    async executeTool(toolName: string, args: any) {
         try {
-            const tool = this.tools[toolIndex];
+            const tool = this.tools.find(t => t.name === toolName);
             if (!tool) {
-                throw new Error('工具索引无效');
+                throw new Error(`找不到工具: ${toolName}`);
             }
 
             console.log(chalk.cyan(`\n🔧 正在执行工具: ${tool.name}`));
@@ -106,83 +113,18 @@ export class MCPClient {
             return result;
         } catch (error) {
             console.error(chalk.red('\n❌ 执行工具时出错:'), error);
-            return null;
+            throw error;
         }
     }
 
-    async promptForToolArguments(tool: any) {
-        const args: any = {};
-        const schema = tool.inputSchema.properties;
-
-        console.log(chalk.yellow(`\n📝 请输入 ${tool.name} 的参数:`));
-
-        for (const [key, prop] of Object.entries<{ type: string }>(schema)) {
-            const isRequired = tool.inputSchema.required?.includes(key);
-            const prompt = `${key}${isRequired ? ' (必填)' : ' (选填)'}: `;
-            const value = await this.rl.question(chalk.blue(prompt));
-
-            if (value || isRequired) {
-                switch (prop.type) {
-                    case 'number':
-                        args[key] = Number(value);
-                        break;
-                    case 'boolean':
-                        args[key] = value.toLowerCase() === 'true';
-                        break;
-                    case 'object':
-                        try {
-                            args[key] = JSON.parse(value);
-                        } catch {
-                            args[key] = value;
-                        }
-                        break;
-                    default:
-                        args[key] = value;
-                }
-            }
-        }
-
-        return args;
-    }
-
-    async chatLoop() {
-        try {
-            console.log(chalk.green("\n🎉 MCP 客户端已启动!"));
-            console.log(chalk.blue("💬 输入工具编号或输入 'quit' 退出"));
-
-            while (true) {
-                console.log(chalk.yellow("\n📋 可用工具列表:"));
-                this.tools.forEach((tool, index) => {
-                    console.log(chalk.blue(`${index + 1}. ${tool.name}`));
-                });
-
-                const input = await this.rl.question(chalk.yellow("\n🔧 请选择工具 (1-" + this.tools.length + ") 或输入 'quit' 退出: "));
-
-                if (input.toLowerCase() === "quit") {
-                    break;
-                }
-
-                const toolIndex = parseInt(input) - 1;
-                if (isNaN(toolIndex) || toolIndex < 0 || toolIndex >= this.tools.length) {
-                    console.log(chalk.red("\n❌ 无效的工具选择!"));
-                    continue;
-                }
-
-                const selectedTool = this.tools[toolIndex];
-                const args = await this.promptForToolArguments(selectedTool);
-                await this.executeTool(toolIndex, args);
-            }
-        } finally {
-            this.rl.close();
-        }
+    getTools(): Tool[] {
+        return this.tools;
     }
 
     async cleanup() {
-        await this.mcp.close();
-    }
-
-    async close() {
-        this.rl.close();
-        await this.cleanup();
+        if (this.transport) {
+            await this.mcp.close();
+            this.transport = null;
+        }
     }
 } 
