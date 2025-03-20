@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { builtinModules } from 'module';
 
 export default defineConfig({
     build: {
@@ -9,7 +10,11 @@ export default defineConfig({
             fileName: 'extension',
         },
         rollupOptions: {
-            external: ['vscode'],
+            external: [
+                'vscode',
+                ...builtinModules,
+                ...builtinModules.map(m => `node:${m}`),
+            ],
             output: {
                 // Provide global variables to use in the UMD build
                 globals: {
