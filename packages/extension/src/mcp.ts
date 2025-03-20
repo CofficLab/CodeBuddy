@@ -12,13 +12,6 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 
-// 检查环境和chalk支持
-console.log('Node.js version:', process.version);
-console.log('chalk.level:', chalk.level);
-console.log('Terminal supports colors:', process.stdout.isTTY);
-console.log('FORCE_COLOR:', process.env.FORCE_COLOR);
-console.log('NO_COLOR:', process.env.NO_COLOR);
-
 // 强制启用颜色输出
 process.env.FORCE_COLOR = '1';
 chalk.level = 3;
