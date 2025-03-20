@@ -1,6 +1,6 @@
 {
-    "name": "@venom-gui/extension",
-    "displayName": "venom-gui-extension",
+    "name": "@coffic/buddy",
+    "displayName": "Buddy",
     "description": "",
     "version": "0.0.1",
     "engines": {
