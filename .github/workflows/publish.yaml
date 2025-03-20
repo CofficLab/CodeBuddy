@@ -54,11 +54,13 @@ jobs:
               run: |
                   cd packages/client 
                   yarn 
-                  npm run build
+                  yarn build
             - name: Build Extension
               run: |
                   cd packages/extension
                   yarn
+                  yarn build
+                  ls -l dist
             - name: Publish
               run: |
                   cd packages/extension

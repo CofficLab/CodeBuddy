@@ -1,8 +1,3 @@
-import { Anthropic } from "@anthropic-ai/sdk";
-import {
-    MessageParam,
-    Tool,
-} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import readline from "readline/promises";
@@ -26,11 +21,6 @@ console.log('Color test:',
 
 dotenv.config();
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-// if (!ANTHROPIC_API_KEY) {
-//     throw new Error("ANTHROPIC_API_KEY is not set");
-// }
-
 // 默认配置
 const projectDir = path.join(os.homedir(), 'Code', 'Playground', 'build_mcp_for_cursor', 'project');
 const defaultPath = path.join(projectDir, 'main.py');
@@ -48,15 +38,11 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 class MCPClient {
     private mcp: Client;
-    private anthropic: Anthropic;
     private transport: StdioClientTransport | null = null;
-    private tools: Tool[] = [];
+    private tools: any[] = [];
     private rl: readline.Interface;
 
     constructor() {
-        this.anthropic = new Anthropic({
-            apiKey: ANTHROPIC_API_KEY,
-        });
         this.mcp = new Client({ name: "mcp-client-cli", version: "1.0.0" });
         this.rl = readline.createInterface({
             input: process.stdin,
@@ -88,20 +74,16 @@ class MCPClient {
                 await delay(1000);
 
                 const toolsResult = await this.mcp.listTools();
-                this.tools = toolsResult.tools.map((tool) => {
-                    return {
-                        name: tool.name,
-                        description: tool.description,
-                        input_schema: tool.inputSchema,
-                    };
-                });
+                this.tools = toolsResult.tools;
 
-                const toolNames = this.tools.map(({ name }) => name);
                 console.log(
                     chalk.green("\n✅ Connected to server with tools:")
                 );
-                console.log(chalk.blue(toolNames.map(name => `  • ${name}`).join("\n")));
-                return; // 成功连接，退出重试循环
+                this.tools.forEach((tool, index) => {
+                    console.log(chalk.blue(`  ${index + 1}. ${tool.name}`));
+                    console.log(chalk.gray(`     ${tool.description}`));
+                });
+                return;
             } catch (e) {
                 const errorMsg = formatError(e);
                 console.log(chalk.yellow(`\n⚠️ Attempt ${attempt}/${retries} failed:`), "\n" + errorMsg);
@@ -111,7 +93,6 @@ class MCPClient {
                     throw e;
                 }
 
-                // 清理当前连接
                 if (this.transport) {
                     try {
                         await this.mcp.close();
@@ -120,79 +101,98 @@ class MCPClient {
                     }
                 }
 
-                // 等待一段时间后重试
                 console.log(chalk.blue(`\n🔄 Waiting 2 seconds before retry...`));
                 await delay(2000);
             }
         }
     }
 
-    async processQuery(query: string) {
-        const messages: MessageParam[] = [
-            {
-                role: "user",
-                content: query,
-            },
-        ];
+    async executeTool(toolIndex: number, args: any) {
+        try {
+            const tool = this.tools[toolIndex];
+            if (!tool) {
+                throw new Error('Invalid tool index');
+            }
 
-        const response = await this.anthropic.messages.create({
-            model: "claude-3-5-sonnet-20241022",
-            max_tokens: 1000,
-            messages,
-            tools: this.tools,
-        });
+            console.log(chalk.cyan(`\n🔧 Executing tool: ${tool.name}`));
+            console.log(chalk.gray(`Arguments: ${JSON.stringify(args, null, 2)}`));
 
-        const finalText = [];
-        const toolResults = [];
+            const result = await this.mcp.callTool({
+                name: tool.name,
+                arguments: args,
+            });
 
-        for (const content of response.content) {
-            if (content.type === "text") {
-                finalText.push(content.text);
-            } else if (content.type === "tool_use") {
-                const toolName = content.name;
-                const toolArgs = content.input as { [x: string]: unknown } | undefined;
+            console.log(chalk.green('\n✅ Result:'));
+            console.log(result.content);
+            return result;
+        } catch (error) {
+            console.error(chalk.red('\n❌ Error executing tool:'), error);
+            return null;
+        }
+    }
 
-                const result = await this.mcp.callTool({
-                    name: toolName,
-                    arguments: toolArgs,
-                });
-                toolResults.push(result);
-                finalText.push(
-                    chalk.magenta(`🔧 [Calling tool ${toolName} with args ${JSON.stringify(toolArgs)}]`)
-                );
+    async promptForToolArguments(tool: any) {
+        const args: any = {};
+        const schema = tool.inputSchema.properties;
 
-                messages.push({
-                    role: "user",
-                    content: result.content as string,
-                });
+        console.log(chalk.yellow(`\n📝 Enter arguments for ${tool.name}:`));
 
-                const response = await this.anthropic.messages.create({
-                    model: "claude-3-5-sonnet-20241022",
-                    max_tokens: 1000,
-                    messages,
-                });
+        for (const [key, prop] of Object.entries<{ type: string }>(schema)) {
+            const isRequired = tool.inputSchema.required?.includes(key);
+            const prompt = `${key}${isRequired ? ' (required)' : ' (optional)'}: `;
+            const value = await this.rl.question(chalk.blue(prompt));
 
-                finalText.push(
-                    response.content[0].type === "text" ? response.content[0].text : ""
-                );
+            if (value || isRequired) {
+                // 根据类型转换值
+                switch (prop.type) {
+                    case 'number':
+                        args[key] = Number(value);
+                        break;
+                    case 'boolean':
+                        args[key] = value.toLowerCase() === 'true';
+                        break;
+                    case 'object':
+                        try {
+                            args[key] = JSON.parse(value);
+                        } catch {
+                            args[key] = value;
+                        }
+                        break;
+                    default:
+                        args[key] = value;
+                }
             }
         }
 
-        return finalText.join("\n");
+        return args;
     }
 
     async chatLoop() {
         try {
             console.log(chalk.green("\n🎉 MCP Client Started!"));
-            console.log(chalk.blue("💬 Type your queries or 'quit' to exit."));
+            console.log(chalk.blue("💬 Enter tool number or 'quit' to exit."));
 
             while (true) {
-                const message = await this.rl.question(chalk.yellow("\n🤔 Query: "));
-                if (message.toLowerCase() === "quit") {
+                console.log(chalk.yellow("\n📋 Available tools:"));
+                this.tools.forEach((tool, index) => {
+                    console.log(chalk.blue(`${index + 1}. ${tool.name}`));
+                });
+
+                const input = await this.rl.question(chalk.yellow("\n🔧 Select tool (1-" + this.tools.length + ") or 'quit': "));
+
+                if (input.toLowerCase() === "quit") {
                     break;
                 }
-                const response = await this.processQuery(message);
-                console.log("\n" + response);
+
+                const toolIndex = parseInt(input) - 1;
+                if (isNaN(toolIndex) || toolIndex < 0 || toolIndex >= this.tools.length) {
+                    console.log(chalk.red("\n❌ Invalid tool selection!"));
+                    continue;
+                }
+
+                const selectedTool = this.tools[toolIndex];
+                const args = await this.promptForToolArguments(selectedTool);
+                await this.executeTool(toolIndex, args);
             }
         } finally {
             this.rl.close();
