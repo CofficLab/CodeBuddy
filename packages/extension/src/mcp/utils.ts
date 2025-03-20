@@ -3,7 +3,7 @@ import chalk from "chalk";
 // 格式化错误信息的辅助函数
 export function formatError(error: any): string {
     const errorMessage = error.message || String(error);
-    const errorStack = error.stack ? `\n${error.stack}` : '';
+    const errorStack = error.stack ? `\n调用栈：${error.stack}` : '';
     return chalk.red(errorMessage) + chalk.gray(errorStack);
 }
 

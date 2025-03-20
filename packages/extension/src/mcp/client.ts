@@ -18,22 +18,22 @@ export class MCPClient {
     async connectToServer(command: string, retries = 3) {
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
-                console.log(chalk.cyan(`\n🚀 Starting server with command (attempt ${attempt}/${retries}):`), chalk.yellow(command));
+                console.log(chalk.cyan(`\n🚀 正在启动服务器 (第 ${attempt}/${retries} 次尝试):`), chalk.yellow(command));
 
                 const [cmd, ...args] = command.split(' ').filter(Boolean);
                 if (!cmd || args.length === 0) {
-                    throw new Error("Invalid command format. Please provide both command and script path");
+                    throw new Error("命令格式无效。请同时提供命令和脚本路径");
                 }
 
-                console.log(chalk.gray('\nCommand details:'));
-                console.log(chalk.gray('  Command:'), chalk.blue(cmd));
-                console.log(chalk.gray('  Arguments:'), chalk.blue(args.join(' ')));
+                console.log(chalk.gray('\n命令详情:'));
+                console.log(chalk.gray('  命令:'), chalk.blue(cmd));
+                console.log(chalk.gray('  参数:'), chalk.blue(args.join(' ')));
 
                 if (this.transport) {
                     try {
                         await this.mcp.close();
                     } catch (error) {
-                        console.log(chalk.yellow("\n⚠️ Error while cleaning up previous connection:"), error);
+                        console.log(chalk.yellow("\n⚠️ 清理旧连接时出错:"), error);
                     }
                     this.transport = null;
                 }
@@ -43,20 +43,20 @@ export class MCPClient {
                     args: args,
                 });
 
-                console.log(chalk.gray('\n⏳ Waiting for server initialization...'));
+                console.log(chalk.gray('\n⏳ 等待服务器初始化...'));
                 await delay(1000);
 
-                console.log(chalk.gray('🔌 Connecting to server...'));
+                console.log(chalk.gray('🔌 正在连接服务器...'));
                 this.mcp.connect(this.transport);
 
-                console.log(chalk.gray('⏳ Waiting for connection stabilization...'));
+                console.log(chalk.gray('⏳ 等待连接稳定...'));
                 await delay(1000);
 
-                console.log(chalk.gray('📋 Fetching available tools...'));
+                console.log(chalk.gray('📋 获取可用工具列表...'));
                 const toolsResult = await this.mcp.listTools();
                 this.tools = toolsResult.tools;
 
-                console.log(chalk.green("\n✅ Connected to server with tools:"));
+                console.log(chalk.green("\n✅ 已连接到服务器，可用工具如下:"));
                 this.tools.forEach((tool, index) => {
                     console.log(chalk.blue(`  ${index + 1}. ${tool.name}`));
                     console.log(chalk.gray(`     ${tool.description}`));
@@ -64,10 +64,10 @@ export class MCPClient {
                 return;
             } catch (e) {
                 const errorMsg = formatError(e);
-                console.log(chalk.yellow(`\n⚠️ Attempt ${attempt}/${retries} failed:`), "\n" + errorMsg);
+                console.log(chalk.yellow(`\n⚠️ 第 ${attempt}/${retries} 次尝试失败:`), "\n" + errorMsg);
 
                 if (attempt === retries) {
-                    console.log(chalk.red("\n❌ Failed to connect to MCP server after all attempts"));
+                    console.log(chalk.red("\n❌ 多次尝试后仍无法连接到服务器"));
                     throw e;
                 }
 
@@ -75,12 +75,12 @@ export class MCPClient {
                     try {
                         await this.mcp.close();
                     } catch (closeError) {
-                        console.log(chalk.yellow("\n⚠️ Error while cleaning up connection:"), closeError);
+                        console.log(chalk.yellow("\n⚠️ 清理连接时出错:"), closeError);
                     }
                     this.transport = null;
                 }
 
-                console.log(chalk.blue(`\n🔄 Waiting 2 seconds before retry...`));
+                console.log(chalk.blue(`\n🔄 等待 2 秒后重试...`));
                 await delay(2000);
             }
         }
@@ -90,22 +90,22 @@ export class MCPClient {
         try {
             const tool = this.tools[toolIndex];
             if (!tool) {
-                throw new Error('Invalid tool index');
+                throw new Error('工具索引无效');
             }
 
-            console.log(chalk.cyan(`\n🔧 Executing tool: ${tool.name}`));
-            console.log(chalk.gray(`Arguments: ${JSON.stringify(args, null, 2)}`));
+            console.log(chalk.cyan(`\n🔧 正在执行工具: ${tool.name}`));
+            console.log(chalk.gray(`参数: ${JSON.stringify(args, null, 2)}`));
 
             const result = await this.mcp.callTool({
                 name: tool.name,
                 arguments: args,
             });
 
-            console.log(chalk.green('\n✅ Result:'));
+            console.log(chalk.green('\n✅ 执行结果:'));
             console.log(result.content);
             return result;
         } catch (error) {
-            console.error(chalk.red('\n❌ Error executing tool:'), error);
+            console.error(chalk.red('\n❌ 执行工具时出错:'), error);
             return null;
         }
     }
@@ -114,11 +114,11 @@ export class MCPClient {
         const args: any = {};
         const schema = tool.inputSchema.properties;
 
-        console.log(chalk.yellow(`\n📝 Enter arguments for ${tool.name}:`));
+        console.log(chalk.yellow(`\n📝 请输入 ${tool.name} 的参数:`));
 
         for (const [key, prop] of Object.entries<{ type: string }>(schema)) {
             const isRequired = tool.inputSchema.required?.includes(key);
-            const prompt = `${key}${isRequired ? ' (required)' : ' (optional)'}: `;
+            const prompt = `${key}${isRequired ? ' (必填)' : ' (选填)'}: `;
             const value = await this.rl.question(chalk.blue(prompt));
 
             if (value || isRequired) {
@@ -147,16 +147,16 @@ export class MCPClient {
 
     async chatLoop() {
         try {
-            console.log(chalk.green("\n🎉 MCP Client Started!"));
-            console.log(chalk.blue("💬 Enter tool number or 'quit' to exit."));
+            console.log(chalk.green("\n🎉 MCP 客户端已启动!"));
+            console.log(chalk.blue("💬 输入工具编号或输入 'quit' 退出"));
 
             while (true) {
-                console.log(chalk.yellow("\n📋 Available tools:"));
+                console.log(chalk.yellow("\n📋 可用工具列表:"));
                 this.tools.forEach((tool, index) => {
                     console.log(chalk.blue(`${index + 1}. ${tool.name}`));
                 });
 
-                const input = await this.rl.question(chalk.yellow("\n🔧 Select tool (1-" + this.tools.length + ") or 'quit': "));
+                const input = await this.rl.question(chalk.yellow("\n🔧 请选择工具 (1-" + this.tools.length + ") 或输入 'quit' 退出: "));
 
                 if (input.toLowerCase() === "quit") {
                     break;
@@ -164,7 +164,7 @@ export class MCPClient {
 
                 const toolIndex = parseInt(input) - 1;
                 if (isNaN(toolIndex) || toolIndex < 0 || toolIndex >= this.tools.length) {
-                    console.log(chalk.red("\n❌ Invalid tool selection!"));
+                    console.log(chalk.red("\n❌ 无效的工具选择!"));
                     continue;
                 }
 
