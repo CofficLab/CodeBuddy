@@ -12,7 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // 注册命令
     let disposable = vscode.commands.registerCommand(
-        `vue-3-vscode-webview.createFlow`,
+        `buddycoder.open`,
         () => {
             // 显示通知
             vscode.window.showInformationMessage("Opening AI Chat Interface");

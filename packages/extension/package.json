@@ -16,12 +16,12 @@
     ],
     "main": "./dist/extension.js",
     "activationEvents": [
-        "onCommand:vue-3-vscode-webview.createFlow"
+        "onCommand:buddycoder.open"
     ],
     "contributes": {
         "commands": [
             {
-                "command": "vue-3-vscode-webview.createFlow",
+                "command": "buddycoder.open",
                 "title": "Open AI Chat Assistant"
             }
         ],
