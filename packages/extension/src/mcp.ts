@@ -1,5 +1,4 @@
 import readline from "readline/promises";
-import dotenv from "dotenv";
 import chalk from "chalk";
 import { MCPClient } from "./mcp/client";
 import { ConfigManager } from "./mcp/config";
@@ -8,8 +7,6 @@ import { formatError } from "./mcp/utils";
 // 强制启用颜色输出
 process.env.FORCE_COLOR = '1';
 chalk.level = 3;
-
-dotenv.config();
 
 async function main() {
     const rl = readline.createInterface({
